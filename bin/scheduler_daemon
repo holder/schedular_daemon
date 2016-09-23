@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+# This file launches the scheduler as a daemon.
+# USAGE: 
+# 
+#     scheduler_daemon run           # start the daemon and stay on top
+#     scheduler_daemon start         # start the daemon and stay on top
+#     scheduler_daemon stop          # stop all instances of the application
+#     scheduler_daemon restart       # stop all instances and restart them afterwards
+#
+# options can be passed to the scheduler like so:
+#
+#     scheduler_daemon start -- --except=session_cleaner
+#
+# options can be passed to the daemon:
+#
+#     scheduler_daemon start --dir=/my/rails/root/
+#
+# see README for more info
+require 'rubygems'
+require 'daemons'
+require 'scheduler_daemon/command_line_args_to_hash'
+
+# arguments to pass to the daemon launcher
+def launch_args(options = {})
+  params = options.map{|k,v| "--#{k}=#{v}"}
+  if params.empty?
+    ARGV
+  else
+    args = ARGV.dup
+    args << '--' unless args.include?('--')
+    args + params
+  end
+end
+
+# app arguments
+app_args = {}
+# only take args after the '--' arg.
+if separator_index = ARGV.index('--')
+  app_args = CommandLineArgsToHash.parse(ARGV[separator_index+1..-1])
+end
+
+app_args[:dir] ||= Dir.pwd
+app_args[:pid_dir] ||= File.expand_path(File.join(app_args[:dir], 'log'))
+scheduler = File.join(File.dirname(__FILE__), %w(.. lib loader scheduler_loader.rb))
+
+raise "#{app_args[:pid_dir]} does not exist" unless File.exist?(app_args[:pid_dir])
+
+app_options = {
+  :app_name => 'scheduler_daemon',
+  :ARGV => launch_args(app_args),
+  :dir_mode => :normal,
+  :dir => app_args[:pid_dir],
+  :multiple => false,
+  :backtrace => true,
+  :log_output => true,
+  :monitor => true
+}
+
+Daemons.run(scheduler, app_options)

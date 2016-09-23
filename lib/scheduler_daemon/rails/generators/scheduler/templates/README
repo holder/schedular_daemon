@@ -1,0 +1,11 @@
+
+GREAT!
+
+Now that you've generated the scheduler daemon and a default task, 
+you can take a look at the new task:
+
+  lib/scheduled_tasks/session_cleaner_task.rb
+
+or make your own:
+
+  script/generate scheduler_task MyTaskName
